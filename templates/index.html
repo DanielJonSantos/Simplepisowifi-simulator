@@ -69,6 +69,9 @@
       transform: translateX(26px);
     }
   </style>
+
+  <!-- CryptoJS for HMAC -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
   <div class="card">
@@ -85,7 +88,7 @@
     <button onclick="connect()">Connect</button>
     <p id="response">No connection yet.</p>
 
-    <!-- Added: Debug time display -->
+    <!-- Debug time display -->
     <p>🕒 Client Time: <span id="clientTime">--</span></p>
     <p>🕒 Server Time: <span id="serverTime">--</span></p>
 
@@ -122,37 +125,34 @@
     }
 
     async function connect() {
-      const mac = "AA:BB:CC:11:22:33";
+      const mac = sessionStorage.getItem("mac") || "AA:BB:CC:11:22:33";
+      const secret = sessionStorage.getItem("secretKey");
+
+      if (!secret) {
+        alert("❗ Secret key missing. Please scan QR and use key first.");
+        return;
+      }
+
       const timestamp = Math.floor(Date.now() / 1000).toString();
-
-      const hmacRes = await fetch("/generate-hmac", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mac, timestamp })
-      });
-
-      const hmacData = await hmacRes.json();
-      const hmac = hmacData.hmac;
-      if (serverTimeEl)
-        serverTimeEl.innerText = hmacData.server_time;
+      const hmacValue = CryptoJS.HmacSHA256(mac + timestamp, secret).toString();
 
       const res = await fetch("/connect", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mac, timestamp, hmac })
+        body: JSON.stringify({ mac, timestamp, hmac: hmacValue })
       });
 
       const result = await res.json();
       const msg = document.getElementById("response");
-      if (msg) {
-        msg.innerText = (result.message || result.reason);
-        msg.className = (result.status === "connected" || result.status === "insecure") ? "success" : "error";
-      }
+      msg.innerText = result.message || result.reason;
+      msg.className = result.status === "connected" ? "success" : "error";
+
+      // update server time
+      if (serverTimeEl && result.server_time)
+        serverTimeEl.innerText = result.server_time;
 
       if (result.status === "connected" || result.status === "insecure") {
-        setTimeout(() => {
-          window.location.href = "/session";
-        }, 1000);
+        setTimeout(() => window.location.href = "/session", 1000);
       }
     }
   </script>

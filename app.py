@@ -1,6 +1,11 @@
 from flask import Flask, request, jsonify, render_template, redirect, session, url_for
 import time, hmac, hashlib
 from secure_utils import verify_hmac, get_mac_hash
+import qrcode
+import os
+import secrets
+import webbrowser
+from threading import Timer
 
 app = Flask(__name__)
 app.secret_key = 'sessionsecret'
@@ -15,6 +20,55 @@ MAC_WHITELIST = {
 # Store logs and sessions in-memory
 session_log = []
 user_sessions = {}
+
+@app.route('/register')
+def register():
+    mac = request.args.get('mac')
+    if not mac:
+        return "MAC address required", 400
+
+    # Generate a new secret and expiration
+    secret = secrets.token_hex(16)
+    expiry = time.time() + 300  # 5 minutes
+
+    user_sessions[mac] = {
+        'secret': secret,
+        'expires_at': expiry
+    }
+
+    # Create QR code that links to secret display
+    qr_link = f"http://127.0.0.1:5000/secret/{mac}"
+    qr = qrcode.make(qr_link)
+
+    qr_folder = "static/qrcodes"
+    os.makedirs(qr_folder, exist_ok=True)
+    filename = os.path.join(qr_folder, f"{mac.replace(':', '-')}.png")
+    qr.save(filename)
+
+    # Construct show_qr.html link
+    show_qr_link = f"http://127.0.0.1:5000/register?mac={mac}"
+    print(f"[✅ QR Page Ready] View the QR for {mac} here:")
+    print(show_qr_link)
+
+    return render_template("show_qr.html", mac=mac, qr_path=f"/{filename}")
+
+@app.route('/secret/<mac>')
+def show_secret(mac):
+    device = user_sessions.get(mac)
+    if not device:
+        return "⚠️ Device not registered", 404
+
+    current_time = time.time()
+    if current_time > device['expires_at']:
+        return "⏱️ Secret key expired", 403
+
+    return render_template(
+        "show_secret.html",
+        mac=mac,
+        secret=device['secret'],
+        expires_at=time.strftime('%H:%M:%S', time.localtime(device['expires_at']))
+    )
+
 
 @app.route('/')
 def index():
@@ -44,7 +98,7 @@ def connect():
     timestamp = data.get('timestamp')
     hmac_signature = data.get('hmac')
     result = {}
-    
+
     if SECURITY_MODE:
         if not verify_hmac(mac, timestamp, hmac_signature, SECRET_KEY):
             result = {'status': 'rejected', 'reason': 'HMAC tampering detected'}
@@ -98,5 +152,17 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
+# 🔓 Auto-open QR page on app start
+def open_qr_page():
+    mac = "AA:BB:CC:11:22:33"
+    url = f"http://127.0.0.1:5000/register?mac={mac}"
+    webbrowser.open_new(url)
+
 if __name__ == '__main__':
+    import os
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        # Only run this in the *actual* main process (not the reloader)
+        Timer(1.25, open_qr_page).start()
+    
     app.run(debug=True)
+

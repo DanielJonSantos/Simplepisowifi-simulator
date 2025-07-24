@@ -1,5 +1,6 @@
-display qr code:
+show qr code link:
 http://127.0.0.1:5000/register?mac=AA:BB:CC:11:22:33
 
-qr code link: 
+
+qr code link:
 http://127.0.0.1:5000/secret/AA:BB:CC:11:22:33

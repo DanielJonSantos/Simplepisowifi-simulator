@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Device Registration</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 30px; }
+    img { margin-top: 20px; border: 2px dashed #444; padding: 10px; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <h2>📲 Scan to Register Device</h2>
+  <p>MAC Address: <strong>{{ mac }}</strong></p>
+  <img src="{{ qr_path }}" alt="QR Code for Device" width="250">
+  <p>This QR contains a secret key for secure connection. Scan it with your PisoWiFi client app.</p>
+  <hr>
+<p>📎 Can't scan the QR?</p>
+<p>Click here to view your secret key manually:</p>
+<a href="/secret/{{ mac }}" target="_blank" style="font-size: 16px; color: #007bff;">
+  http://127.0.0.1:5000/secret/{{ mac }}
+</a>
+
+<code>{{ secret }}</code>
+</body>
+</html>
