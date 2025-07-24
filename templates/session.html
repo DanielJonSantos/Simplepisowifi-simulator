@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PisoWiFi Session</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #fffbe7;
+      padding: 30px;
+      text-align: center;
+    }
+    .box {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      display: inline-block;
+    }
+    button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 18px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #timeLeft {
+      font-size: 32px;
+      color: #d63333;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>💻 PisoWiFi Session</h2>
+    <p><strong>Coins Inserted:</strong> <span id="coinCount">0</span></p>
+    <p><strong>Time Remaining:</strong> <span id="timeLeft">00:00</span></p>
+    <button onclick="insertCoin()">Insert ₱1 Coin</button>
+  </div>
+
+  <script>
+    let coins = 0;
+    let totalSeconds = 0;
+    let timer;
+
+    const mac = "AA:BB:CC:11:22:33";
+
+    function insertCoin() {
+      fetch("/add-coin", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mac })
+      })
+      .then(res => res.json())
+      .then(data => {
+        coins = data.coins;
+        totalSeconds = data.minutes * 60;
+        document.getElementById("coinCount").innerText = coins;
+        startTimer();
+      });
+    }
+
+    function startTimer() {
+      if (timer) clearInterval(timer);
+      timer = setInterval(() => {
+        if (totalSeconds <= 0) {
+          clearInterval(timer);
+          alert("⏱️ Time's up! Disconnecting...");
+          window.location.href = "/logout";
+        } else {
+          totalSeconds--;
+          updateTimeDisplay();
+        }
+      }, 1000);
+    }
+
+    function updateTimeDisplay() {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      document.getElementById("timeLeft").innerText =
+        String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0');
+    }
+  </script>
+</body>
+</html>
