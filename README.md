@@ -75,14 +75,12 @@ Add here your screenshots or gifs of:
 
 -   ✅ Secure connection
 
-> ![Secure Connection](./images/image1.png){width="4.86941491688539in"
-> height="2.920087489063867in"}
+> ![Secure Connection](./images/image1.png)
 
 -   ❌ Attack rejection
--   ![Attack Rejection](./images/image2.png){width="6.5in" height="3.813888888888889in"}
+-   ![Attack Rejection](./images/image2.png)
 -   ⏳ Timer-based session
--   ![Timer Session](./images/image3.png){width="4.938188976377953in"
-    height="3.5838331146106737in"}
+-   ![Timer Session](./images/image3.png)
 
 ## 🔧 To-Do / Improvements
 
