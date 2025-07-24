@@ -123,3 +123,10 @@ demo link
 
 Developed by [Daniel Jon Santos](https://github.com/yourusername) as a
 simulation project for secure PisoWiFi systems.
+
+## 📦 Recent Updates
+
+- 🔄 Auto-opens registration QR page on app start
+- 📷 Fallback link provided for non-scannable QR
+- ⏱️ Countdown timer for secret key expiration
+- ✅ Fixed Flask dev server double-execution bug
