@@ -5,7 +5,21 @@ import qrcode
 import os
 import secrets
 import webbrowser
+import json
+import base64
 from threading import Timer
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+
+
+# Load server's private key
+with open("private_key.pem", "rb") as key_file:
+    PRIVATE_KEY = serialization.load_pem_private_key(
+        key_file.read(),
+        password=None
+    )
+
 
 app = Flask(__name__)
 app.secret_key = 'sessionsecret'
@@ -27,52 +41,92 @@ def register():
     if not mac:
         return "MAC address required", 400
 
-    # Generate a new secret and expiration
+    # Create secret and expiration
     secret = secrets.token_hex(16)
-    expiry = time.time() + 300  # 5 minutes
+    expiry = time.time() + 300  # 5 min
 
     user_sessions[mac] = {
         'secret': secret,
         'expires_at': expiry
     }
 
-    # Create QR code that links to secret display
-    qr_link = f"http://127.0.0.1:5000/secret/{mac}"
-    qr = qrcode.make(qr_link)
+    # Create message payload
+    payload = {
+        "mac": mac,
+        "secret": secret,
+        "timestamp": int(expiry)
+    }
 
+    payload_str = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+
+    #  Sign the payload
+    signature = PRIVATE_KEY.sign(
+        payload_str.encode(),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+    )
+    signature_b64 = base64.b64encode(signature).decode()
+
+    #  Final QR data
+    qr_data = {
+        "payload": payload,
+        "signature": signature_b64
+    }
+
+    qr_string = json.dumps(qr_data)
+
+    # 📸 Generate and save QR code
+    qr = qrcode.make(qr_string)
     qr_folder = "static/qrcodes"
     os.makedirs(qr_folder, exist_ok=True)
     filename = os.path.join(qr_folder, f"{mac.replace(':', '-')}.png")
     qr.save(filename)
 
-    # Construct show_qr.html link
-    show_qr_link = f"http://127.0.0.1:5000/register?mac={mac}"
-    print(f"[✅ QR Page Ready] View the QR for {mac} here:")
-    print(show_qr_link)
-
+    print(f"[Signed QR Ready] http://127.0.0.1:5000/register?mac={mac}")
     return render_template("show_qr.html", mac=mac, qr_path=f"/{filename}")
+
 
 @app.route('/secret/<mac>')
 def show_secret(mac):
-    device = user_sessions.get(mac)
-    if not device:
-        return "⚠️ Device not registered", 404
+    info = user_sessions.get(mac)
+    if not info:
+        return "No secret found.", 404
 
-    current_time = time.time()
-    if current_time > device['expires_at']:
-        return "⏱️ Secret key expired", 403
+    payload = {
+        "mac": mac,
+        "secret": info['secret'],
+        "timestamp": int(info['expires_at'])
+    }
 
-    return render_template(
-        "show_secret.html",
-        mac=mac,
-        secret=device['secret'],
-        expires_at=time.strftime('%H:%M:%S', time.localtime(device['expires_at']))
+    payload_str = json.dumps(payload, separators=(",", ":"), sort_keys=True) 
+    
+
+    signature = PRIVATE_KEY.sign(
+        payload_str.encode(),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
     )
+    signature_b64 = base64.b64encode(signature).decode()
+
+    return render_template("show_secret.html",
+    mac=mac,
+    payload_json=payload,  # pass dict, NOT json.dumps(payload)
+    signature=signature_b64.strip()
+)
+
 
 
 @app.route('/')
 def index():
-    return render_template('index.html', logs=session_log)
+    return render_template('index.html', logs=session_log)  # No longer incorrectly references undefined variables
+
 
 @app.route('/set-security', methods=['POST'])
 def set_security():

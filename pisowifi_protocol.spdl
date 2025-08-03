@@ -1,0 +1,38 @@
+// PisoWiFi Secure Protocol Verification
+// Daniel Jon Santos – Simulation Model
+// Modeled in Scyther SPDL
+
+protocol PisoWiFiSecure {
+    role User {
+        const mac: Text;         // User's MAC address
+        fresh ts: Nonce;         // Timestamp (modeled as fresh nonce)
+        var hmac: Text;
+        secret k: SymmetricKey;  // Shared secret key
+
+        // Compute HMAC using the secret key
+        macro hmac := h(k, <mac, ts>);
+
+        send_1(User, Server, mac, ts, hmac);
+
+        recv_2(Server, User, success: Text);
+    }
+
+    role Server {
+        const mac: Text;
+        var ts: Nonce;
+        var hmac: Text;
+        secret k: SymmetricKey;
+
+        // Recompute HMAC and verify
+        macro expected_hmac := h(k, <mac, ts>);
+
+        recv_1(User, Server, mac, ts, hmac);
+        match(hmac, expected_hmac);
+
+        // (Optional) whitelist check: model as matching expected MAC
+        // Uncomment to simulate MAC whitelist only
+        // match(mac, "AA:BB:CC:11:22:33");
+
+        send_2(Server, User, "✅ Secure connection established.");
+    }
+}
