@@ -1,5 +1,28 @@
-display qr code:
-http://127.0.0.1:5000/register?mac=AA:BB:CC:11:22:33
+# Flask web framework
+Flask==2.3.3
 
-qr code link: 
-http://127.0.0.1:5000/secret/AA:BB:CC:11:22:33
+# Cryptography libraries for RSA signatures and HMAC
+cryptography==41.0.4
+
+# QR code generation
+qrcode==7.4.2
+Pillow==10.0.1
+
+# HTTP request handling (if needed for future enhancements)
+requests==2.31.0
+
+# Development and debugging (optional)
+flask-cors==4.0.0
+
+# Security utilities (if you want to add rate limiting in future)
+# flask-limiter==3.5.0
+
+# For better JSON handling (already included in Python 3.7+)
+# json5==0.9.14
+
+# Additional security headers (optional for production)
+# flask-talisman==1.1.0
+
+# For testing (optional)
+# pytest==7.4.2
+# pytest-flask==1.2.0
